@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>使用Canvas实现画图功能</title>
+    <style>
+        .container{
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+    </div>
+    <script>
+        
+        window.onload = function(){
+            //基础配置
+            var canvasWidth = 800;
+            var canvasHeight  = 600;
+            var scaleP = 1; //按照canvas画布尺寸的缩放比例
+            
+            var canvas = document.getElementById("canvas");
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            var ctx = canvas.getContext('2d');
+            
+            drawImg('imgs/test.jpg',ctx)
+        }
+        //初始绘制图片并居中到canvas
+        function drawImg(img,ctx){
+            var imgBox = new Image();
+            imgBox.src = img;
+            imgBox.onload = function(){
+                var imgHeight = imgBox.height;
+                var imgWidth = imgBox.width;
+
+                //获取图片宽高比
+                var picWH = imgWidth / imgHeight;
+                var canvasWH = 800/600;
+                
+                //计算缩放比例
+                var p = 0;
+                var drawWidth = 0;
+                var drawHeight = 0;
+
+                if(picWH > canvasWH){
+                    p = imgWidth / 800;
+                    //计算绘制图片的宽高
+                    drawWidth = 800;
+                    drawHeight = imgHeight / p;
+
+                    //图片距离上下两边的距离
+                    var dis = (600 - drawHeight) / 2;
+                    ctx.drawImage(imgBox,0,dis,drawWidth,drawHeight);
+                }else{
+                    p = imgHeight / 600;
+                    drawWidth = imgWidth / p;
+                    drawHeight = 600; 
+                    
+                    //图片距离左右两边的距离
+                    var dis = (800 - drawWidth) / 2;
+                    ctx.drawImage(imgBox,dis,0,drawWidth,drawHeight);
+                }
+            }
+        }
+
+        //图片缩放
+        function scaleImg(){
+
+        }
+
+        //图片拖拽
+        function dragImg(){
+            
+        }
+
+    </script>
+</body>
+</html>
