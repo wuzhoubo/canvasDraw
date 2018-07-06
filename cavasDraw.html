@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>使用Canvas实现画图功能</title>
+    <title>canvas学习</title>
     <style>
         .container{
             border: 2px solid #ddd;
@@ -15,73 +15,263 @@
             margin: 0 auto;
             margin-top: 40px;
         }
+        .types{
+            width: 300px;
+            display: flex;
+            height: 100px;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+            margin: 0 auto;
+        }
+        .types span{
+            height: 40px;
+            border: 1px solid #ccc;
+            color: #ff5555;
+            width: 100px;
+            text-align: center;
+            line-height: 40px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .types span.active{
+            border: 1px solid #ff5555;
+            background-color: #ff5555;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
+    <div class="types" id="types">
+        <span>绘制矩形</span>
+        <span>绘制多边形</span>
+    </div>
+    <p>按住 ctrl 可移动图片</p>
     <div class="container">
         <canvas id="canvas"></canvas>
     </div>
     <script>
+        //切换绘制类型
+        var drawType = 0;  //0 不绘制，1, 绘制矩形  2，绘制多边形   
+        var types = document.getElementById('types').querySelectorAll("span");
+        for(var i=0;i<types.length;i++){
+            !function(i){
+                types[i].onclick = function(){
+                    this.className = 'active';
+                    drawType = i + 1;
+                    for(var j=0;j<types.length;j++){
+                        if(j != i){
+                            types[j].className = '';
+                        }
+                    }
+                }
+            }(i)
+        }
         
+
+        //基础配置
+        var canvasWidth = 800;
+        var canvasHeight  = 600;
+        var canvasWH = canvasWidth/canvasHeight;  //canvas绘图框宽高比
+        //canvas对象
+        var canvas = null;
+        var ctx = null;
+        //图片对象
+        var imgObj = null;
+        var firstImgWidth = 0;
+        var firstImgHeight = 0;
+        //图片宽高比
+        var picWH = 0;                           
+        
+        //初始化时绘制图片的宽高
+        var drawWidth = 0;
+        var drawHeight = 0;
+        
+        //按照canvas画布尺寸的缩放比例
+        var scaleP = 1; 
+        var imgX = 0; //画布上图片放置的XY坐标
+        var imgY = 0;
+        var imgSrc = 'imgs/test3.jpg';
+        
+        var drawTemSquareTag = true;  //绘制临时矩形标记，点击第二次之后不重新绘制
+
+        //绘制的矩形列表,坐标是以图片左上角为原点的坐标
+        //但这个坐标是缩放到适应canvas后的坐标，取出应计算到适合图片的坐标
+        //初始化矩形数据
+        var squareList = [];
+
         window.onload = function(){
-            //基础配置
-            var canvasWidth = 800;
-            var canvasHeight  = 600;
-            var scaleP = 1; //按照canvas画布尺寸的缩放比例
-            
-            var canvas = document.getElementById("canvas");
+            canvas = document.getElementById("canvas");
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
-            var ctx = canvas.getContext('2d');
-            
-            drawImg('imgs/test.jpg',ctx)
-        }
-        //初始绘制图片并居中到canvas
-        function drawImg(img,ctx){
+            ctx = canvas.getContext('2d');
+            //初始化图片对象
             var imgBox = new Image();
-            imgBox.src = img;
+            imgBox.src = imgSrc;
             imgBox.onload = function(){
-                var imgHeight = imgBox.height;
-                var imgWidth = imgBox.width;
-
-                //获取图片宽高比
-                var picWH = imgWidth / imgHeight;
-                var canvasWH = 800/600;
-                
-                //计算缩放比例
-                var p = 0;
-                var drawWidth = 0;
-                var drawHeight = 0;
-
-                if(picWH > canvasWH){
-                    p = imgWidth / 800;
-                    //计算绘制图片的宽高
-                    drawWidth = 800;
-                    drawHeight = imgHeight / p;
-
-                    //图片距离上下两边的距离
-                    var dis = (600 - drawHeight) / 2;
-                    ctx.drawImage(imgBox,0,dis,drawWidth,drawHeight);
-                }else{
-                    p = imgHeight / 600;
-                    drawWidth = imgWidth / p;
-                    drawHeight = 600; 
-                    
-                    //图片距离左右两边的距离
-                    var dis = (800 - drawWidth) / 2;
-                    ctx.drawImage(imgBox,dis,0,drawWidth,drawHeight);
-                }
+                imgObj = imgBox;
+                firstImgHeight = imgObj.height;
+                firstImgWidth = imgObj.width;
+                picWH = firstImgWidth / firstImgHeight;
+                //初始化图片
+                initImg()
             }
         }
+        //初始化图片并居中到canvas
+        function initImg(){
+            //计算图片正好放入缩放比例
+            var p = 0;
 
-        //图片缩放
-        function scaleImg(){
+            if(picWH > canvasWH){
+                p = firstImgWidth / canvasWidth;
+                //计算绘制图片的宽高
+                drawWidth = canvasWidth;
+                drawHeight = firstImgHeight / p;
+                //图片距离上下两边的距离
+                imgY = (canvasHeight - drawHeight) / 2;
+            }else{
+                p = firstImgHeight / canvasHeight;
+                drawWidth = firstImgWidth / p;
+                drawHeight = canvasHeight; 
+                //图片距离左右两边的距离
+                imgX = (canvasWidth - drawWidth) / 2;
+            }
+            drawImage();
+            canvasEventsInit();
+        }
+        
+        //绘制方法
+        function drawImage() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            //绘制图片
+            ctx.drawImage(
+                imgObj, //要使用的图像
+                0, 0, //开始剪切的 x 坐标位置。
+                firstImgWidth, firstImgHeight,  //被剪切图像的高度。
+                imgX, imgY,//在画布上放置图像的 x 、y坐标位置。
+                drawWidth * scaleP, drawHeight * scaleP  //要使用的图像的宽度、高度
+            );
 
+            //绘制矩形
+            for(var i=0;i<squareList.length;i++){
+                drawRect(squareList[i]);
+            }
+        }
+        
+        //绘制标注函数
+        function drawRect(options){
+            ctx.beginPath();
+            ctx.lineWidth="2";
+            ctx.strokeStyle="red";
+            var startX = options.start.x * scaleP + imgX;
+            var startY = options.start.y * scaleP + imgY;
+            var rectW = (options.end.x - options.start.x) * scaleP;
+            var rectH = (options.end.y - options.start.y) * scaleP;
+            ctx.rect(startX,startY,rectW,rectH);
+            ctx.stroke();
+        }
+        
+
+        //临时绘制矩形函数
+        function temDrawRect(start,end){
+            ctx.beginPath();
+            ctx.lineWidth="2";
+            ctx.strokeStyle="green";
+            var startX = start.x;
+            var startY = start.y;
+            var rectW = end.x - start.x;
+            var rectH = end.y - start.y;
+            ctx.rect(startX,startY,rectW,rectH);
+            ctx.stroke();
         }
 
-        //图片拖拽
-        function dragImg(){
-            
+        function canvasEventsInit() {
+            canvas.onmousedown = function (event) {
+                //ctrl键 + 鼠标左键可以移动图片
+                if(event.ctrlKey){
+                    canvas.style.cursor = 'default';
+                    var pos = windowToCanvas(event.clientX, event.clientY);  //坐标转换，将窗口坐标转换成canvas的坐标
+                    canvas.onmousemove = function (event) {  //移动
+                        canvas.style.cursor = 'move';
+                        var posl = windowToCanvas(event.clientX, event.clientY);
+                        var x = posl.x - pos.x;
+                        var y = posl.y - pos.y;
+                        pos = posl;
+                        imgX += x;
+                        imgY += y;
+                        drawImage();  //重新绘制图片
+                    };
+                    canvas.onmouseup = function () {
+                        canvas.onmousemove = null;
+                        canvas.onmouseup = null;
+                    };
+                }else{
+                    //绘制矩形
+                    if(drawType == 1){
+                        var pos = windowToCanvas (event.clientX, event.clientY);
+                        //绘制临时提示绿色矩形框
+                        if(drawTemSquareTag){
+                            drawTemSquareTag = false;
+                            canvas.onmousemove = function (event) {  //移动
+                                drawImage();
+                                var posl = windowToCanvas(event.clientX, event.clientY);
+                                var x = posl.x - pos.x;
+                                var y = posl.y - pos.y;
+                                temDrawRect(pos,posl);
+                            };
+                            var theSquare = {
+                                start:{
+                                    x:pos.x - imgX,
+                                    y:pos.y - imgY
+                                },
+                                end:{
+
+                                },
+                                description:'空'
+                            }
+                            squareList.push(theSquare);
+
+                        }else{
+                            canvas.onmousemove = null;
+                            //计算在图片上的坐标，并存入矩形数组
+                            squareList[squareList.length - 1].end.x = pos.x - imgX;
+                            squareList[squareList.length - 1].end.y = pos.y - imgY;
+                            drawImage();
+                            drawTemSquareTag = true;
+                        }
+                        console.log(squareList);
+                    }
+
+                    //绘制多边形
+                }
+            };
+
+            canvas.onmousewheel = canvas.onwheel = function (event) {    //滚轮放大缩小
+                var pos = windowToCanvas (event.clientX, event.clientY);
+                event.wheelDelta = event.wheelDelta ? event.wheelDelta : (event.deltalY * (-40));  //获取当前鼠标的滚动情况
+                if (event.wheelDelta > 0) {
+                    if(scaleP > 20) return;  //放大比例最大20倍
+                    console.log(" 放大 ");
+                    scaleP *= 2;
+                    imgX = imgX * 2 - pos.x;
+                    imgY = imgY * 2 - pos.y;
+                } else {
+                    if(scaleP < 0.1) return;  //缩小比例最大10倍
+                    console.log(" 缩小");
+                    scaleP /= 2;
+                    imgX = imgX * 0.5 + pos.x * 0.5;
+                    imgY = imgY * 0.5 + pos.y * 0.5;
+                }
+                drawImage();   //重新绘制图片
+            };
+        }
+
+        function windowToCanvas(x,y) {
+            var box = canvas.getBoundingClientRect();  //这个方法返回一个矩形对象，包含四个属性：left、top、right和bottom。分别表示元素各边与页面上边和左边的距离
+            return {
+                x: x - box.left - (box.width - canvas.width) / 2,
+                y: y - box.top - (box.height - canvas.height) / 2
+            };
         }
 
     </script>
