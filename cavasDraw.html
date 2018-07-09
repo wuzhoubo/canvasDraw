@@ -158,8 +158,9 @@
             }
         }
         
-        //绘制标注函数
+        //绘制矩形函数
         function drawRect(options){
+            //绘制矩形
             ctx.beginPath();
             ctx.lineWidth="2";
             ctx.strokeStyle="red";
@@ -169,8 +170,11 @@
             var rectH = (options.end.y - options.start.y) * scaleP;
             ctx.rect(startX,startY,rectW,rectH);
             ctx.stroke();
+            //绘制矩形上的文字
+            ctx.fillStyle="red";
+            ctx.font="14px Georgia";
+            ctx.fillText(options.description,startX,startY - 4,rectW);
         }
-        
 
         //临时绘制矩形函数
         function temDrawRect(start,end){
@@ -199,7 +203,7 @@
                         pos = posl;
                         imgX += x;
                         imgY += y;
-                        drawImage();  //重新绘制图片
+                        drawImage();  //重新绘制
                     };
                     canvas.onmouseup = function () {
                         canvas.onmousemove = null;
@@ -227,7 +231,7 @@
                                 end:{
 
                                 },
-                                description:'空'
+                                description:'空的介绍'
                             }
                             squareList.push(theSquare);
 
@@ -236,10 +240,27 @@
                             //计算在图片上的坐标，并存入矩形数组
                             squareList[squareList.length - 1].end.x = pos.x - imgX;
                             squareList[squareList.length - 1].end.y = pos.y - imgY;
+                            
+                            //将开始点始终设置为左上那个点
+                            var start = squareList[squareList.length - 1].start;
+                            var end = squareList[squareList.length - 1].end;
+                            if(start.x > end.x){
+                                var temX = start.x;
+                                start.x = end.x;
+                                end.x = temX;
+                            }
+                            if(start.y > end.y){
+                                var temY = start.y;
+                                start.y = end.y;
+                                end.y = temY;
+                            }
+                            squareList[squareList.length - 1].start = start;
+                            squareList[squareList.length - 1].end = end;
                             drawImage();
                             drawTemSquareTag = true;
                         }
-                        console.log(squareList);
+                    }else{
+                        drawTemSquareTag = true;
                     }
 
                     //绘制多边形
