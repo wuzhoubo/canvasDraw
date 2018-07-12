@@ -94,6 +94,7 @@
         var imgSrc = 'imgs/test3.jpg';
         
         var drawTemSquareTag = true;  //绘制临时矩形标记，点击第二次之后不重新绘制
+        var drawLinesTag = true;   //绘制多边形标记，用以判断是否是第一次点击
 
         //绘制的矩形列表,坐标是以图片左上角为原点的坐标
         //但这个坐标是缩放到适应canvas后的坐标，取出应计算到适合图片的坐标
@@ -225,8 +226,8 @@
                             };
                             var theSquare = {
                                 start:{
-                                    x:pos.x - imgX,
-                                    y:pos.y - imgY
+                                    x:(pos.x - imgX)/scaleP,
+                                    y:(pos.y - imgY)/scaleP
                                 },
                                 end:{
 
@@ -234,12 +235,11 @@
                                 description:'空的介绍'
                             }
                             squareList.push(theSquare);
-
                         }else{
                             canvas.onmousemove = null;
                             //计算在图片上的坐标，并存入矩形数组
-                            squareList[squareList.length - 1].end.x = pos.x - imgX;
-                            squareList[squareList.length - 1].end.y = pos.y - imgY;
+                            squareList[squareList.length - 1].end.x = (pos.x - imgX)/scaleP;
+                            squareList[squareList.length - 1].end.y = (pos.y - imgY)/scaleP;
                             
                             //将开始点始终设置为左上那个点
                             var start = squareList[squareList.length - 1].start;
@@ -264,6 +264,10 @@
                     }
 
                     //绘制多边形
+                    if(drawType == 2){
+                        var pos = windowToCanvas (event.clientX, event.clientY);
+                    }
+
                 }
             };
 
